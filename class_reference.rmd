@@ -27,6 +27,96 @@ The command to set a working directory is setwd(). For example;
 setwd("~/Documents/GitHub/data_journalism_2022_spring")
 ```
 
+## Prelab 2
+``` {r}
+ #gives the first couple rows of data
+head(maryland_ppp)
+
+#gives the values of each field/variable/column (max, min, median, etc.)
+summary(maryland_ppp)
+
+#shows the names of all the columns
+colnames(maryland_ppp)
+
+#shows column name, data type, and examples of what first couple values look like
+glimpse(maryland_ppp)
+```
+
+
+### arrange()
+orders the rows of a data frame by the values of selected columns.
+``` {r}
+arrange(desc(percent_payroll)) #arrange in descending order
+
+arrange((percent_payroll) # default - arrange in ascending order
+
+```
+
+### if_else()
+if_else(condition, true, false, missing = NULL)
+``` {r}
+# if/else example
+maryland_with_in_out <- maryland_ppp %>%
+  mutate(
+    in_out = if_else(
+        servicing_lender_state == 'MD', "IN", "OUT"
+      )
+  )
+```
+
+
+### case_when()
+multiple if_else() statements
+equivalent of SQL CASE WHEN statemetn
+If no cases match, NA is returned
+```{r}
+# case_when example
+maryland_jobs_categories <- maryland_ppp %>%
+mutate(
+  jobs_retained_category = case_when(
+    jobs_retained < 10 ~ 'under_10',
+    jobs_retained >= 10 & jobs_retained < 25 ~ '10_to_25',
+    jobs_retained >= 50 & jobs_retained < 100 ~ '50_to_100',
+    jobs_retained >= 100 & jobs_retained < 250 ~ '100_to_250',
+    jobs_retained >= 250 & jobs_retained < 500 ~ '250_to_500',
+    jobs_retained == 500 ~ '500'
+  )
+)
+```
+
+
+## Filters
+
+Filter is a tidyverse verb that uses criteria you supply to return a subset of the original data. Here's how it is structured:
+
+`filter(COLUMN_NAME OPERATOR CRITERIA)`
+
+Where COLUMN_NAME is any column name from your dataframe, OPERATOR is some comparison operator like == or > or < and CRITERIA is something to compare the values in COLUMN_NAME to.
 
 
 
+
+### read.csv vs read_csv
+read.csv - Reads a file in table format and creates a data frame from it, with cases corresponding to lines and variables to fields in the file.
+
+read_csv - will make assumptions about the data
+```{r}
+# using read.csv - base R
+maryland_ppp_sample <- read.csv('data/ppp_maryland.csv')
+glimpse(maryland_ppp_sample)
+
+# using read_csv from the tidyverse - makes assumptions about the content of the data
+maryland_ppp_sample <- read_csv('data/ppp_maryland.csv')
+glimpse(maryland_ppp_sample)
+```
+
+
+### lubridate
+- can parse functions or turn other columns into date format, but have to match order as much as possible
+e.g. dmy(), myd(), dym(), ymd_hms() or parse_date_time()
+```{r}
+lubridate_maryland_ppp <- maryland_ppp_sample %>% mutate(
+    CleanDate = ymd(date_approved)
+)
+glimpse(lubridate_maryland_ppp)
+```

@@ -47,6 +47,7 @@ glimpse(maryland_ppp)
 ```{r}
 maryland_ppp %>%
   select(loan_number, amount, payroll_proceed) %>%
+  #mutate(name_of_column = value)
   mutate(
   percent_payroll = payroll_proceed/amount
 )
@@ -100,6 +101,12 @@ One question you might have is whether the lenders servicing these loan applicat
 **Task** Run the following code to create a new column called `in_out` based on the values of `servicing_lender_state`. Add a description of what this code does to your reference notebook.
 
 ```{r}
+maryland_ppp %>%
+  filter(servicing_lender_state == 'MD')
+
+```
+
+```{r}
 # if/else example
 maryland_with_in_out <- maryland_ppp %>%
   mutate(
@@ -113,6 +120,10 @@ maryland_with_in_out <- maryland_ppp %>%
 One common use of mutate is to create a new column and then populate it based on values in an existing column. For example, if we wanted to put the values in `jobs_retained` into broader categories in a new column called `jobs_retained_category` and we have multiple categories. We can use a function called `case_when` to make that easier.
 
 **Task** Run the following code to create a new column called `jobs_retained_category` based on the values of `jobs_retained`. Add a description of what this code does to your reference notebook.
+```{r}
+maryland_ppp %>% group_by(jobs_retained) %>% summarize(count=n())
+```
+
 
 ```{r}
 # case_when example
@@ -127,6 +138,10 @@ mutate(
     jobs_retained == 500 ~ '500'
   )
 )
+```
+
+```{r}
+maryland_jobs_categories %>% group_by(jobs_retained_category) %>% summarize(count=n())
 ```
 
 There's a lot going on here, so let's unpack it. It starts out as a typical mutate statement, but like our if_else example, case_when introduces some new things. Each line is basically a filter followed by `~` and then a value for the new column for records that match that filter. Here is [more detail](https://www.sharpsightlabs.com/blog/case-when-r/) on using `case_when`.
@@ -178,7 +193,7 @@ The key to working with dates is that R needs to know that the column containing
 **Task** Run the following code to load the `ppp_maryland.csv` file, then use glimpse() to see the data type for `date_approved`. Note that we're using `read.csv`, not the tidyverse's `read_csv`:
 
 ```{r}
-# using read.csv
+# using read.csv - base R
 maryland_ppp_sample <- read.csv('data/ppp_maryland.csv')
 glimpse(maryland_ppp_sample)
 ```
@@ -190,7 +205,7 @@ What is the datatype for `date_approved` (it's just to the right of the column n
 
 ```{r}
 lubridate_maryland_ppp <- maryland_ppp_sample %>% mutate(
-    CleanDate = ymd_hms(date_approved)
+    CleanDate = ymd(date_approved)
 )
 glimpse(lubridate_maryland_ppp)
 ```
@@ -202,7 +217,7 @@ Put your answers in the space below.
 ### Task 15: Load data using read_csv
 **Task** Run the following code to load the application data, then use glimpse() to see the data type for `date_approved`.
 ```{r}
-# using read_csv from the tidyverse
+# using read_csv from the tidyverse - makes assumptions about the content of the data
 maryland_ppp_sample <- read_csv('data/ppp_maryland.csv')
 glimpse(maryland_ppp_sample)
 ```
@@ -221,3 +236,10 @@ maryland_ppp %>%
 ```
 What month saw the most applications and how many? Put your answer in the space below.
 **Answer** April 2020
+
+
+``` {r}
+counties <- maryland_ppp %>% group_by(project_county_name)  %>% summarize(count=n())
+
+maryland_ppp %>% filter(is.na(project_county_name))
+```
