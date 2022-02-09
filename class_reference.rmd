@@ -120,3 +120,86 @@ lubridate_maryland_ppp <- maryland_ppp_sample %>% mutate(
 )
 glimpse(lubridate_maryland_ppp)
 ```
+
+##changing data types
+you can change the data type of a column by mutating it and using as.datatype
+```{r}
+mutate(column_name = as.datatype(column_name))
+#e.g.
+mutate(id = as.character(id))
+```
+
+
+## extract month and year
+```{r}
+ppp_maryland_loans %>%
+  mutate(month_year_approved = floor_date(date_approved, "month")) %>%
+  group_by(month_year_approved) %>%
+   summarise(
+    count=n()
+)%>%
+  arrange(month_year_approved)
+
+```
+
+
+
+## clean_names() and rename()
+clean_names() standardizes column names and rename(new_name=old_name) changes the name of the column
+```{r}
+# cleaning function
+cleaned_arnold_md_loans <- arnold_md_loans %>%
+  clean_names()
+  rename(id = x1_id)
+```
+
+
+## get_dupes
+finds duplicate rows in the database
+```{r}
+cleaned_arnold_md_loans %>%
+  get_dupes()
+```
+
+
+## distinct()
+gets rid of duplicate rows
+```{r}
+# cleaning function
+cleaned_arnold_md_loans <- arnold_md_loans %>%
+  clean_names() %>%
+  rename(id = x1_id) %>%
+  mutate(amount = as.numeric(amount)) %>%
+  distinct()
+
+
+# display the cleaned dataset
+cleaned_arnold_md_loans
+
+```
+
+
+## Cleaning data
+str_sub() - Cleans up zip codes by turning all 9-digit zip codes into 5-digit zip codes
+str_to_title - fixes capitalization of values in column
+uses case_when to fix spellings of Arnold to be spelled correctly by looking for strings that are spelled a certain way and replacing them 
+```{r}
+# cleaning function
+cleaned_arnold_md_loans <- arnold_md_loans %>%
+  clean_names() %>%
+  rename(id = x1_id) %>%
+  mutate(amount = as.numeric(amount)) %>%
+  distinct() %>%
+  mutate(zip = str_sub(zip, start=1L, end=5L)) %>%
+  mutate(city = str_to_title(city)) %>%
+  mutate(city = case_when(
+    city == "Anold" ~ "Arnold",
+    str_detect(city,"^Arnl") ~ "Arnold",
+    TRUE ~ city
+  ))
+
+
+# display the cleaned dataset
+cleaned_arnold_md_loans
+
+```
