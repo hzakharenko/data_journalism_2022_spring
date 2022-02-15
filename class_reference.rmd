@@ -203,3 +203,40 @@ cleaned_arnold_md_loans <- arnold_md_loans %>%
 cleaned_arnold_md_loans
 
 ```
+
+
+Sample template for basic filtering, mutuate, group_by with count
+```{r}
+ny_result <- original-data %>%
+    filter(some_column == "some value") %>%
+    mutate(come_column=str_to_title(some_column)) %>%
+    group_by(some_column) %>%
+    summarise(new_aggregate = n()) %>%
+    arrange(desc(new_aggregate))
+    
+```
+
+Sample template for basic filtering, mutuate, group_by with sum
+```{r}
+ny_result <- original-data %>%
+    filter(some_column == "some value") %>%
+    mutate(come_column=str_to_title(some_column)) %>%
+    group_by(some_column) %>%
+    summarise(new_aggregate = sum(some_number_column)) %>%
+    arrange(desc(new_aggregate))
+    
+```
+
+
+Bind rows
+```{r}
+# bind_rows with list
+new_df <- bind_rows(list(data_frame_1, data_frame_2, data_frame_3))
+```
+
+
+Left join
+```{r}
+new_df <- df_1 %>% left_join(df_2, by="shared_column_name")
+```
+
