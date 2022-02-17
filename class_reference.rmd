@@ -240,3 +240,11 @@ Left join
 new_df <- df_1 %>% left_join(df_2, by="shared_column_name")
 ```
 
+
+as.character
+```{r}
+df <- df %>% mutate(across(column_name, as.character))
+```
+
+
+
