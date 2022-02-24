@@ -247,5 +247,12 @@ df <- df %>% mutate(across(column_name, as.character))
 ```
 
 
+```{r}
+md_loans <- read_csv("data/ppp_loans_md.csv.zip")
+college_park_loans <- md_loans %>% filter(city == "College Park")
+write_csv(college_park_loans, "data/college_park_loans.csv")
+
+```
+
 
 
