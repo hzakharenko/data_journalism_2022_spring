@@ -1,0 +1,182 @@
+---
+title: "lab_08"
+author: "derek willis"
+date: "8/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## You will need
+
+* A Census API key
+
+## Load libraries and establish settings
+
+You'll need to load two packages for this: the tidyverse and tidycensus.
+
+**Task** load these two packages
+
+```{r}
+# Turn off scientific notation
+options(scipen=999)
+library(tidyverse)
+library(tidycensus)
+```
+
+## Setup Census API
+
+You'll need your Census API Key:
+
+**Task** set your API Key
+
+```{r echo=FALSE}
+census_api_key("APIKEYHERE")
+#Removed API key after finishing lab to publish to Github
+```
+
+## Load and view ACS variables
+
+You'll also need to load the list of American Community Survey variables from the 2019 5-year estimates so you can identify the codes you need:
+
+**Task** load the variables from the 2019 5-year ACS and save them to a dataframe
+
+```{r}
+# Write code here to load the ACS variables
+v19 <- load_variables(2019, "acs5", cache = TRUE)
+```
+
+## Load PPP data
+
+You'll also need to load an RDS file of PPP loan applications that were removed from the original data by lenders in July.
+
+**Task** read the RDS file and save it to a dataframe
+
+```{r}
+# Write code here to read the RDS file
+ppp_removed <- read_rds("data/lab_08.rds")
+```
+
+## Answer questions
+
+**Q1** What is the Maryland jurisdiction with the lowest median age, according to the ACS 2019 5-year estimates? You will need to find the variable for median age first in your list of ACS variables.
+**A1** Of all Maryland jurisdictions, Baltimore City had the lowest median age.
+
+```{r}
+# variable --> B01002_001
+md <- get_acs(geography = "county", 
+              variables = c(medage = "B01002_001"), 
+              state = "MD", 
+              year = 2019)
+
+
+md %>%
+  arrange(estimate)
+```
+
+**Q2** Which Maryland counties have a median age of at least 50? Write code to isolate just those jurisdictions.
+**A2** Talbot County (50.5) and Worcester County (50.4) have a median age of at least 50. 
+
+```{r}
+md %>%
+  filter(estimate >= 50)
+```
+
+**Q3** Which Maryland counties have the highest percentage of 5-17 year-olds that speak Spanish at home? You'll need one dataframe with county-level data on the number of 5-17 year-olds that speak Spanish at home and a second dataframe with the total population of 5-17 year-olds by county. For each dataframe, rename the `estimate` column to a meaningful name you've given the ACS variable, remove the `variable` columns in each using select and then join them based on GEOID and NAME. Then you can add a column to calculate the percentage of the total 5-17 population that speaks Spanish at home.
+**A3** Prince George's County has the highest percentage of 5-17 year-olds that speak Spanish at home, with 25.6%. The county with the second highest percentage is Montgomery county, with 20.3%. 
+
+1. Create the dataframes for each of the variables
+```{r}
+#variable 1 -- B16007_004: AGE BY LANGUAGE SPOKEN AT HOME FOR THE POPULATION 5 YEARS AND OVER, speak Spanish
+#variable 2 --B16007_002:  AGE BY LANGUAGE SPOKEN AT HOME FOR THE POPULATION 5 YEARS AND OVER, total
+spanish_spoken <- get_acs(geography = "county", 
+              variables = c(spanish_at_home = "B16007_004"), 
+              state = "MD", 
+              year = 2019)
+county_youth_population <- get_acs(geography = "county", 
+              variables = c(population_5to17 = "B16007_002"), 
+              state = "MD", 
+              year = 2019)
+
+```
+2. Rename estimate column, remove variable column using select
+```{r}
+spanish_spoken %>% select(GEOID, NAME, estimate, moe) %>% rename(spanish_spoken_5to17=estimate) -> spanish_spoken
+
+county_youth_population %>% select(GEOID, NAME, estimate, moe) %>% rename(population_5to17=estimate) -> county_youth_population
+```
+3. Join based on GEOID and NAME
+```{r}
+alldata_5to17 <- spanish_spoken %>% inner_join(county_youth_population, by = c("GEOID", "NAME"))
+```
+
+4. Add a column to calculate the percentage of the total 5-17 population that speaks Spanish at home
+```{r}
+alldata_5to17 %>%
+  mutate(spanish_spoken_percentage = spanish_spoken_5to17/population_5to17*100) %>%
+  arrange(desc(spanish_spoken_percentage))
+```
+
+**Q4** Given the counties with the largest percentage of 5-17 year-olds that speak Spanish at home, what stands out to you about the data? How would you describe the top 5 counties? How would you describe Garrett County's numbers?
+**A4** The top two counties, Prince George's County and Montgomery County, are neighboring DC. Caroline County, Frederick County, and Talbot county are all neighboring each other on the Eastern part of Maryland, close to Delaware. Garrett County's numbers are incredibly small, with less than 1% of the population of 5-17 year-olds speaking Spanish at home. This  county that the furthest out from cities in/near Maryland and closer to West Virginia. 
+ 
+**Q5** Which 5-digit zip code had the most removed PPP applications, and what is the percentage of Black population in that zip code according to the ACS? To answer this question, you will need to create separate dataframes with ACS data on total population by zip code and Black population by zip code. In each dataframe, rename the `estimate` column and remove the `variable` column. You'll need to combine the two dataframes in order to calculate the percentage, and then you can combine it with the PPP data. Remember: the PPP data may not have only 5-digit zip codes!
+**A5** The 5-digit zip code with the most removed PPP applications was 20774 with a total of 29 removed applications and a percentage of Black population in that zip code according to the ACS of 88.1%.  
+
+1. Create the two dataframes from ACS data 
+```{r}
+#variable 1 --> black race --> B02001_003
+#variable 2 --> total race --> B02001_001
+Black_pop_by_zip <- get_acs(geography = "zcta", 
+              variables = c(black_pop_zip = "B02001_003"), 
+              state = "MD", 
+              year = 2019)
+total_pop_by_zip <- get_acs(geography = "zcta", 
+              variables = c(total_pop_zip = "B02001_001"), 
+              state = "MD", 
+              year = 2019)
+```
+2. Rename estimate and remove variable column 
+```{r}
+Black_pop_by_zip %>% select(GEOID, NAME, estimate, moe) %>% rename(black_pop=estimate) -> Black_pop_by_zip
+
+total_pop_by_zip %>% select(GEOID, NAME, estimate, moe) %>% rename(total_pop=estimate) -> total_pop_by_zip
+```
+
+3. Combine dataframes on GEOID and NAME
+```{r}
+alldata_race_pop <- Black_pop_by_zip %>% inner_join(total_pop_by_zip, by = c("GEOID", "NAME"))
+```
+
+4. Add a column to calculate the Black percentage of total population
+```{r}
+alldata_race_pop_percentage <- alldata_race_pop %>%
+  mutate(black_pop_percentage = black_pop/total_pop*100)
+```
+
+5. Take PPP data and create column with 5 digit zip codes
+```{r}
+ppp_removed <- ppp_removed %>%
+  mutate(zip5 = str_sub(zip, 1, 5))
+```
+
+6. Combine PPP data with ACS data
+```{r}
+md_zips_with_acs_pop <- alldata_race_pop_percentage %>% left_join(ppp_removed, by=c('GEOID'='zip5'))
+```
+
+7. Find zip code with most removed PPP loans
+```{r}
+md_zips_with_acs_pop %>%
+  group_by(GEOID, black_pop_percentage) %>%
+  summarise(total=n()) %>%
+  arrange(desc(total))
+  
+```
+**Q6** How would you describe to an editor the top 10 zip codes with the most removed applications in terms of Black population? Where are they located, and what do they have in common? Are there any zip codes that seem different, and if so why?
+**A6** Seven of the 10 top zip codes with the most removed applications have a Black population over 50% (in fact, the lowest of these seven is 69.1%). A majority of these top 10 zip codes are in Prince George's County or located in or near Baltimore city. One of the zip codes, 21220, located in Baltimore County, only has a Black population of 23.8%. This zip code is from Middle River, MD, which is an unincorporated community. The only zip code not in Prince George's County or in/near Baltimore is 20904, which is located in Montgomery County (but is the home of Silver Spring, which is right next to PG). 
+
+**Q7** What other columns from the PPP data could be useful in reporting on what happened to these removed loans?
+**A7** Some columns that might be useful in reporting on what happened to these removed loans include lender and columns with other lender information. If a lender that was assigned to a business was removed or could no longer supply the loan, the business might have been removed from the PPP data. Another way to figure out what might have happened to these removed loans include address or other methods of confirming that a applicant had the ability to receive the loan (and didn't fill out the application with wrong information). Other factors that may contribute to the removal of loans might be business type, business age description, jobs retained and loan status. Figuring out what all of the removed loans have in common might be a helpful step in learning why they were removed, which is why comparing these columns could be helpful. 
