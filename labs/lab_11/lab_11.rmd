@@ -123,7 +123,7 @@ Make a map with a point for each one of these mine permits and put a blank map w
 
 What spatial pattern do you see? How does it compare to the spatial pattern in the first map you made?
 
-**A2.** This shows the majority of the active mines in West Virginia are in the South portion of the state. This is the oppposite of what I saw in the first question, where on this map it looks like there is an absense of mines in that part of the state.
+**A2.** This shows the majority of the active mines in West Virginia are in the South portion of the state. This is the opposite of what I saw in the first question, where on this map it looks like there is an absence of mines in that part of the state, particularly in and near the outlier. This layered maps shows the differences on where actual mines are and where the businesses are that handle them in the state.
 
 1. Read in the mine data
 ```{r}
