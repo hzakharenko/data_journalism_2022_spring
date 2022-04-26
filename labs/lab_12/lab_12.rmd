@@ -1,0 +1,260 @@
+---
+title: "lab_12"
+author: "derek willis"
+date: "11/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## You will need
+
+* A Census API key
+* Our usual libraries, plus the geographic ones
+
+## Load libraries and establish settings
+
+**Task** Create a codeblock and load appropriate packages and settings for this lab.
+```{r}
+library(tidyverse)
+library(janitor)
+library(lubridate)
+library(ggrepel)
+library(sf)
+library(tigris)
+library(tidycensus)
+```
+
+```{r}
+# Turn off scientific notation
+options(scipen=999)
+```
+
+## Questions
+
+**Q1.** You are interested in tracking police incidents around the West Virginia University campus over time, with the goal of surfacing interesting incidents and patterns. In particular, you want to know whether the latest incident titles are relatively new/novel compared to previous reports and whether an incident has happened before in the past 30 days.
+
+Using [CSV data](https://raw.githubusercontent.com/dwillis/wvu-projects/master/crime-log/crime_log.csv), making the column names more readable and ensuring each datetime is separated into a date column and an hour column and also create a day_of_week column and populate that using lubridate.
+
+Then write code that will construct a paragraph about the data described above comparing the most recent data to the previous date and the most recent previous date for the same day of the week. To do that, you will need to produce:
+
+1. A dataframe with the crime log data loaded and the datetime column converted to the proper datatype.
+2. Columns in your dataframe that contain the date, time and day of the week that each date represents (you may need to google how to do that).
+3. Generate a dataframe of the most recent date's incidents.
+4. Using the first title in that dataframe, find the number of incidents that occurred in the previous 30 days and write out a sentence using paste. The sentence should include the most recent date, the title of the incident and the number of times that kind of incident has occurred in the previous 30 days.
+
+Put your sentence in the answer below, along with one other question you could ask of this data.
+
+**A1.**"On 2022-04-19, the incident, VEHICLE ACCIDENT, occurred. This incident has happened 9 times over the previous 30 days."
+I think it is interesting how the cases are marked with their status and I am curious to know if that changes every time the date is updated, or if once a case enters the data set it is not altered again. If this were the case, then some of the status for older cases might be incorrect.
+
+
+1. Read in the data as a CSV
+```{r}
+wvu_police_incidents <- read_csv("https://raw.githubusercontent.com/dwillis/wvu-projects/master/crime-log/crime_log.csv")
+```
+2. Convert datetime column from character type to datetime type
+```{r}
+wvu_police_incidents$datetime <- mdy_hm(wvu_police_incidents$datetime)
+
+wvu_police_incidents
+```
+
+3. Make two new columns, date and time for datetime column
+```{r}
+wvu_police_incidents <- wvu_police_incidents %>%
+  mutate(date = as.Date(datetime))
+```
+
+```{r}
+wvu_police_incidents <- wvu_police_incidents %>%
+  mutate(time = hms(format(datetime, format = "%H:%M:%S")))
+```
+
+4. Generate a dataframe of the most recent date's incidents.
+```{r}
+ranked <- wvu_police_incidents %>%
+  arrange(desc(date))
+```
+
+```{r}
+latest_date <- ranked %>%
+  filter(date == max(date))
+```
+
+```{r}
+recent_date <- latest_date$date[1]
+title_search <- latest_date$title[1]
+```
+
+
+5. Using the title of the first incident in latest_date dataframe, find the number of incidents that occurred in the previous 30 days and write out a sentence using paste. The sentence should include the most recent date, the title of the incident and the number of times that kind of incident has occurred in the previous 30 days.
+```{r}
+past_30_days <- wvu_police_incidents %>%
+  filter(title == title_search)
+
+
+past_30_days <- past_30_days %>%
+  filter(date > max(date)-30)
+
+
+no_incidents <- nrow(past_30_days)
+```
+
+```{r}
+final <- paste("On ", recent_date, ", the incident, ", title_search, ", occurred. This incident has happened ", no_incidents, " times over the previous 30 days.", sep="")
+```
+
+```{r}
+final
+```
+
+
+**Q2.** Maryland produces a [CSV file](https://raw.githubusercontent.com/state-of-maryland/VaccineCSVs/master/Vax_ZIP_CODE_FirstSecondSingle_Totals_Raw.csv) showing the total number of vaccinations by zip code and -- interestingly -- it includes non-Maryland zip codes (as well as some zip codes that seem to be bad data). write a script that reads the CSV file, making the columns more readable and adding today's date. Then output the top 25 Maryland zip codes and top 25 non-Maryland zip codes based on number of people fully vaccinated, and write both dataframes out to CSV files, using the following name formats:
+
+Maryland zips: maryland_zips_yyyymmdd.csv
+Non-Maryland zips: non_maryland_zips_yyyymmdd.csv
+
+Where yymmdd is from today's date. You MUST do this programmatically so that it can run every day without being updated. Be sure to add those two files to your GitHub repository.
+
+To do that, you will need to:
+
+1. Get rid of rows that do not have data for fully vaccinated people
+2. Remove any rows where the zip code is less than five digits (there are several ways you could do this).
+3. Figure out the "lowest" and "highest" Maryland zip codes.
+
+Google the top 2-3 zip codes from both Maryland and non-Maryland results and describe them in your answer.
+
+**A2.** For the Maryland zip codes, the top 3 with the most fully vaccinated people were 20906, 20878 and 20874. All of these zip codes are in Montgomery county:  Aspen Hill, North Potomac and Germantown. For the non-Maryland zip codes, the top 3 with the most fully vaccinated people were 20011, 20002 and 20009. These zip codes are all in Washington D.C. It makes sense for the areas with the most vaccinated people to be in/near cities, because they have higher populations and sometimes higher incentive to get vaccinated. 
+
+1. read in the CSV
+```{r}
+md_vax <- read_csv("https://raw.githubusercontent.com/state-of-maryland/VaccineCSVs/master/Vax_ZIP_CODE_FirstSecondSingle_Totals_Raw.csv")
+```
+
+2. Add today's date and rename columns
+```{r}
+md_vax <- md_vax %>%
+  mutate(date = today()) %>%
+  rename(zip_code = ZIP_CODE) %>%
+  rename(first_dose = FirstDose) %>%
+  rename(second_dose = SecondDose) %>%
+  rename(single_dose = SingleDose) %>%
+  rename(at_least_one_dose = AtleastOneDose) %>%
+  rename(fully_vaccinated = FullyVaccinated)
+```
+
+3. remove NA values for FullyVaccinated
+```{r}
+md_vax <- md_vax %>%
+  drop_na(fully_vaccinated)
+```
+
+4. Remove zip codes less than 5 digits
+```{r}
+md_vax <- md_vax[nchar(md_vax$zip_code) ==5 , ]
+```
+
+5. Get list of MD zip codes to compare to
+```{r}
+zip <- get_acs(geography = "zcta", 
+              variables = c(population = "B01001_001"), 
+              state = "MD", 
+              year = 2019,
+              geometry=TRUE)
+```
+
+6. Filter md_vax to include only values in list of MD zip codes
+```{r}
+md_vax_zips <- md_vax %>%
+      filter(zip_code %in% zip$GEOID)
+
+```
+
+7. Filter md_vax to include only values not in MD zip codes
+```{r}
+not_md_vax_zips <- md_vax %>%
+      filter(!(zip_code %in% zip$GEOID))
+```
+
+8. Find the highest values of vaccinated people in both dataframes
+```{r}
+md_vax_zips <- md_vax_zips %>%
+  arrange(desc(fully_vaccinated)) %>%
+  head(25)
+
+not_md_vax_zips <- not_md_vax_zips %>%
+  arrange(desc(fully_vaccinated)) %>%
+  head(25)
+```
+
+9. Write these dataframes out to CSV
+```{r}
+write.csv(md_vax_zips, paste0("maryland_zips_", format(md_vax_zips$date[1], "%Y%m%d"), ".csv"))
+write.csv(not_md_vax_zips, paste0("non_maryland_zips_", format(md_vax_zips$date[1], "%Y%m%d"), ".csv"))
+```
+
+
+**Q3.** Maryland has had one of the more successful vaccination rates, but you want to understand where a significant portion of the population remains less than fully vaccinated. Make a dataframe of all Maryland zip codes from the vaccination data you used in Q2 and join it to Maryland zip code population data from the Census API. Calculate the percentage of fully vaccinated for each zip code and then make a map showing the zip codes with less than 50 percent fully vaccinated. Put a blank map with the outline of Maryland counties (which you can get from Tigris) behind it for context. Add a label to the map describing what the data is and include the date from the vaccination data (programmatically, so you can run it every day).
+
+You WILL need to ensure that the columns you use to join the two dataframes are the same datatype and remember that join order matters.
+
+Describe the output of the map below, and say what you think the most interesting areas are.
+
+**A3.** It looks like the Eastern Shore and Western Maryland have the largest chunks of the state with vaccination populations under 50%. However, what I thought was most surprising from this map were the tiny counties in the middle of the state (some in and near Baltimore city) that have very low vaccination rates. I am curious as to why these smaller zip code areas have such low vaccination rates.
+
+1. Make sure two dataframes are clean and ready to combine
+```{r}
+md_vax_zips_only <- md_vax %>%
+  filter(zip_code %in% zip$GEOID) %>%
+  select(zip_code, fully_vaccinated, date) %>%
+  transform(zip_code = as.character(zip_code))
+
+zip_pop <- zip %>%
+  select(GEOID, estimate, geometry) %>%
+  rename(zip_code = GEOID) %>%
+  rename(population = estimate)
+```
+
+2. Join the two data frames together with the now matching column, zip_code
+```{r}
+md_pop_vax <- zip_pop %>%
+  left_join(md_vax_zips_only)
+```
+
+3. make new column calculating percentage of vaccinated in each zip code and filter for less than 50%
+```{r}
+md_pop_vax <- md_pop_vax %>%
+  mutate(percentage_vax = (fully_vaccinated/population)*100) %>%
+  filter(percentage_vax < 50)
+```
+
+4. Layer it on a map using tigris
+```{r}
+counties <- counties() 
+
+md_counties <- counties %>%
+  filter(STATEFP == "24")
+```
+4. Create label to the map describing what the data is and include the date from the vaccination data (programmatically, so you can run it every day).
+```{r}
+sub <- paste("The vaccination data for this map was taken from ", format(md_pop_vax$date[1], format="%B %d"), ".", sep="")
+sub
+```
+
+
+5. Plot the maps layered on each other 
+```{r}
+ggplot() + 
+  geom_sf(data=md_counties, fill="white") +
+  geom_sf(data=md_pop_vax,aes(fill=percentage_vax)) + 
+  labs(title="Maryland counties with a vaccinated population under 50%", subtitle=sub) +
+  theme_minimal() 
+```
+
+
+
+
+

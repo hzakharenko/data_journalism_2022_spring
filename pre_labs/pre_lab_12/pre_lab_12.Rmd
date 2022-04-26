@@ -69,7 +69,7 @@ Each row represents vaccination stats for a single county on a single day, inclu
 **Task** Run the following code that uses lubridate to make vaccination_date a date column
 
 ```{r}
-county_vaccinations_by_date <- county_vaccinations_by_date %>%
+county_vaccinations_by_date_2 <- county_vaccinations_by_date %>%
   mutate(vaccination_date = date(mdy_hms(vaccination_date)))
 ```
 
